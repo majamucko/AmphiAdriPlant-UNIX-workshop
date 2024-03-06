@@ -1,0 +1,661 @@
+---
+title: "DAY2-STACKS-script"
+output: html_notebook
+---
+##################################################################################
+##########################SCP of files from Isabella-demo:                       #
+#open ubuntu on your local machine and type                                      #
+$scp korisnik@isabella-demo.srce.hr:/storage/korisnik/iqtree/Festuca_ITS.fasta ./#
+##########################SCP of files from your local machine to Isabella       #
+$scp <file> korisnik@isabella-demo.srce.hr:/storage/korisnik/.                   #
+##################################################################################
+
+STACKS INSTALLATION FOR LOCAL MACHINE!
+```{r}
+#### 1. A C++ compiler such as GCC (version >= 4.8), Clang, MS Visual Studio and Intel C++ compiler.
+To install the Development Tools packages, run the following command as root or user with sudo privileges:
+```{r}
+$ sudo apt update
+$ sudo apt install build-essential 
+```
+You may also want to install the manual pages about using GNU/Linux for development:
+```{r}
+$ sudo apt-get install manpages-dev
+```
+Verify that the GCC compiler is successfully installed by running the following command that prints the GCC version:
+```{r}
+$ gcc --version
+```
+Ubuntu 22.04 repositories provide GCC version 11.3.0:
+```{r}
+#Output should look like this:
+gcc (Ubuntu 11.3.0-1ubuntu1~22.04) 11.3.0
+Copyright (C) 2021 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+```
+Additionally, zlib-dev must be installed in your libraries:
+```{r}
+$sudo apt-get install zlib1g-dev
+```
+Now, extract tar.gz file that you downloaded from https://catchenlab.life.illinois.edu/stacks/
+```{r}
+$tar xvzf /mnt/c/Users/Maja/Downloads/stacks-2.62.tar.gz
+$cd stacks-2.62
+```
+Now configure, make and install package!
+```{r}
+$./configure
+$make
+$sudo make install
+
+#by default stacks scripts and programs are installed in /usr/local/bin/ and you can check if they work by typing any of them, eg. process_radtags
+$process_radtags -h
+```
+
+## Theory behind STACKS -> power of RADSeq method!
+Genetic polymorphisms - natural variations inside genomes that have no adverse effects on the individual and occur with high frequency in the general population.
+These involve two or more variants of a particular DNA sequence, and all of these can be generated and accessed through methods such as RFLP, SSLP. AFLP, RAPD, VNTR, microsatellite, SNP, STR, SFP...
+### Microsatellites:
+- repeating DNA sequences that occur in variable number (e.g. one variant consists in two repetitions of AC-ACAC, whereas another consists in five repetitions - ACACACACAC)
+- Allele: each possible number of repetitions (in this case, 2 and 5)
+- Genotype: In diploid organisms, combination of two alleles (in this case, the posibilities are 2/2, 2/5, 5/5) - this kind of table is output of the microsatelite analysis (rows are individuals, columns are combinations of alleles witholding microsatellites)
+- each microsatellite can have large number of posible alleles
+
+*Pros:*
+- Microsatellites are neutral and distributed along the genome which is non-biased information;
+- they are highly variable which is highly infromative;
+and they are highly polymorphic which is also highly informative but requires many individuals.
+
+*Cons:*
+- they do not have known evolutionary pattern and therefore it is difficult to model them,
+- there are some tehnical issues with low reproducibility and it is
+- tedious to develop - you maybe get tens of them (low number)
+### SNPs
+- variants occuring at a single nucleotide positions (e.g. one variant consists on the sequence AATCCG whereas another consists of AATTCG)
+- alleles - each possible nucleotide a SNP can take (in this case, C and T)
+- Genotype: in diploid organisms is a combination of two alleles (in this case, the posibillities are C/C, C/T or T/T)
+- SNPs used for population genetics usually contain only two possible variants
+- analysis usually generates table similar to microsatellite table, only having single variant in each cell corresponding to individual and one SNP in the genome.
+*Pros:*
+- Most of them are neutral and distributed along the genome which is of course non-biased information
+- they are highly variable and therefore highly informative
+- They correspong to only two alleles for which reason less samples are needed, but con is that you need more markers (loci) to fulfill sampling strategy along the genome
+- they have known evolutionary pattern which is easier to model (substitutions, indels)
+- methods deriving SNPs are highly reproducible, therefore represent more standardized genotyping techniques
+- they are easier to develop - and also higher amount can be developped at the same cost/time
+
+Genome-wide distributed SNPs:
+Simoultanous genotyping of neutral and adaptive loci - with rad sequencing we can detect both of them, although neutral loci are ones we need to compare between individuals for evolutionary purposes.
+
+### SNP arrays: known model genomes that have probes synthesized for binding to homozygotes in populations.
+If we do not have model genomes, we need to sequence them, but for a lot of individuals this is too expensive.
+Therefore we need to fragment the genome and sequence those small fragments. 
+
+If you want to identify SNPs you can sequence a transcriptome (most expressed genes) of an individual and on those bases you develop an SNP array. Then you select some individuals for SNP array genotyping. --> From this approach RAD sequencing was developed: you do the both steps at the same time:
+
+### Restriction site associated DNA sequencing: 
+-focus on sequencing numerous samples for a suset of homologous regions across the genome
+-simultaneousely identify and genotype SNPs -> cost is a fraction of sequenting the whole genome and thousands of genomes can be assayes in just a few weeks
+
+### How to capture the same "orthologous" regions in all individuals?
+we use restriction enzymes to cut the genome and provide the number of fragments we want to catch
+- sbfI enzyme for example in stickleback cuts in 22,830 sites and we get ~ 45,000 RAD tags. For 30x coverage we would need to sequence 1,350,000 reads. In HiSeq you have 160 million reads per lane. If we divide 160,000,000 with 1,350,000 you get ~118. So for 360 individuals for example we would need ~8,000 euros (compared to genome sequencing is far less cost)
+
+### Restriction enzymes:
+we have low, medium and high cut enzyme. We want to have enough tags, but not too many (to avoid sequencing of whole genome). According to our budget, we need to find best possible coverage for enzyme cutter we have. For example we get 50x coverage for 2,000,000 reads (our budget) if we use medium cutter from which we can get for example 40,000 tags.
+So, to sum up: we sample genome according to cut sites and sequence those tags. We get infromative variant polymorphic sites from those tags.
+####################################################################################################################
+
+### Original RAD-Seq
+we digest with one enzyme (medium frequent cutter). In second step we ligate the adaptors and then we do a random shearing (apart from site cutted by enzyme we shear our DNA). Then we do size selection of those fragments that are long enough, and then ligate Y adaptors and perform PCR. This is then pooled and sequenced in same lane. We pool for example 33 samples that we can distinguish according to adaptors.
+
+1. "cutting strategy" - original rad has one enzyme, ddRAD has two, 2bRAD has one that cuts at two sites.
+"shearing/size selection" - 300-500bp fragments that starts by the restriction wnzyme cut-site. 
+-in GBS there is no shearing and no size selection. In PCR some fragments will amplify more easily. Therefore we will have fragments that start with same cut-site on same fragments.
+-in ddRAD - we have two different cut sites and PCR products of same length.
+-in 2bRAD we have very small fragments
+
+2. PCR duplicates can not be diferentiated in ddRAD, in original RAD it can be identified if we use paired-end seguencing
+
+3. According to relative genome size we need to choose appropriate enzyme cutter (for example rare cutter). Basically, for genos of grasses (3-10Gbp big) they are advising to use ddRAD and rare cutter.
+
+####################################################################################################################
+########################################*RAW READS FASTQC - QUALITY CHECK*##########################################
+Lets check quality of our toydata raw reads we got from sequencing service!
+```{r}
+$mkdir -p ~/data_qual/FASTQC
+#load FastQC module
+$load fastqc/0.11.9
+$fastqc ~/Share/exercises/STACKS/raw_data/*fastq.gz -o ~/data_qual/FASTQC
+
+## if we type >fastqc -h we will se a display of the different options for FASTQC. We can a look at the Synopsis to figure out how to run the program. You have to type fastqc and then it is compulsory to add the path for the input files. Among other several options, we can specify an output path for our output files by typing “-o”.
+## Once we have run the program, we should move the *.html output files into our local computer. You can check how to “scp” to do so in the “Connection to the Amazon EC2 service.pdf” guidelines. We can open the *.html files using a web browser like Chrome and observe the different outputs.
+```
+## Cleaning and demultiplexing RAD-seq data
+When we get files from sequencer (fastq) we need to analyze them. First we check the quality and then we process rad-tags and analyze snps to get genotype data table. With it we can do all the rest of the analyses we need to interpret our data.
+*STACKS* - software pipeline for building loci from short-read sequences, such as those generated at Illumina platform. Stacks was developed to work with restriction enzyme-based data.
+*Challenges* - syntax of commands is difficult without unix knowledge. Creating and editing support files and making loops needs a bit of knowledge of shell scripting; working using screen or 'nohup'.
+We need to understand each module under pipeline and choose the parameters our data needs.
+Stacks can be divided into: *raw reads*; *core*, and *execution control*. 
+*raw reads* selections offers this modules: process_radtags; process_shortreads; clone_filter; kmer_filter
+*core* offers moduls such as: ustacks; cstacks; sstacks; tsv2bam; gstacks; and populations.
+*execution control* offers combined modules for de novo and ref map analyses: denovo_map.pl and ref_map.pl
+
+Cleaning and demultiplexing is done with *raw reads*; assembly is done with *core* and marker selection is done with *execution control*.
+For demultiplexing we need infromations: restriction enzyme(s); barcodes; data quality. All sequences we get from sequencer will look like: adapter-barcode-restriction enzyme-read.
+Trimming the reads: depending of quality of the reads. We need to remove also PCR duplicates. 
+After cleaning the reads we do the assembly. Basically we put all the reads from Ind1 together at same place in genome, then Ind2, Ind3....and so on. For reference genome this is easier, but for denovo, we need a hypothetical genome. We assemble the reads according to some parameters. This is done with ustacks and cstacks.
+*m* - number of positions that we allow to be different between reads from same individual and same allelle. This is parameter that considers IDENTICAL READS
+*M* - put together reads within same individuals. Each stacks is divided in kmers, distance should be less then value of M between different stacks. This is parameter that consider ALL READS within individual.
+*n* - parameter to put together reads from all individuals
+*N* - we merge secondary reads that have been exclluded in first step with *m* parameter. If for example we had identical reads, and *m* set to 5, all duplicate reads would be in 'waiting room', and later on with *n* can be rescued and used in downstream analysis. This is how we increase the coverage. If we have enough coverage, we can ignore these reads. SNP calling wont be done on secondary reads.
+Which are good parameters? We dont know, there is no good value for these parametest in universal way. We cant apply same value to all places in the genome - that means we need to minimize the affect to whole hypothetical genome with minimum damage parameters.
+
+Then we do gstacks: assemble and merge paired-end contigs; call variant sites in the population and call genotypes in each sample. These information will be stored in catalog.fa.gz and catalog.calls
+
+Once we do this, we go to marker selection (populations). Starting from catalog we can sort samples according to different parameters. We can select samples with at least 10000 tags for example. Also,
+we can select those tags that are present in at least X samples/X populations. Then, we can also filter SNPs according to some statistics (Hardy-weinberg, missing data, fixed in pops, individuals)
+
+*RAW DATA*
+Huge fastq files from illumina, 4 lines for each read. First thign is to check the general quality of reads.This is done with fastqc program. Once we get this, we will make decisions in later-on process.
+*Process_radtags* will identify barcodes sequences to generate demultiplexed individual files. Barcode file is tab-seperated file with barcode and sample_name. This module will look for the barcodes, and then after detection will examine sequence. If it does not look ok, it will be descarded. *-r* option will rescue barcodes and RAD-tags with maximum number of mistmached we set this module with. This module will also check the average sequencing quality of reads and if its lower than 90% (phred 10) it will be descarded.
+
+## Paired-end-data processing_radtags:
+Lets process our raw reads and demultiplex them into biological samples!
+```{r}
+#make new directory in ~/data_qual named clean/
+$mkdir -p ~/data_qual/clean/
+$cd clean/
+$module load stacks/2.62
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/A1_A2_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/A1_A2_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/STACKS/raw_data/A1_A2_barcodes_inline_null.txt -c -q -r
+
+#output shoulg look like this:
+Processing paired-end data.
+Using Phred+33 encoding for quality scores.
+Found 1 paired input file(s).
+Searching for single-end, inlined barcodes.
+Loaded 2 barcodes (6bp).
+Will attempt to recover barcodes with at most 1 mismatches.
+Processing file 1 of 1 [A1_A2_R1_toydata.fastq.gz]
+  Reading data from:
+  /home/maja2004lts/Share/exercises/STACKS/raw_data/A1_A2_R1_toydata.fastq.gz and
+  /home/maja2004lts/Share/exercises/STACKS/raw_data/A1_A2_R2_toydata.fastq.gz
+  Processing RAD-Tags...
+  50000 total reads; -1410 ambiguous barcodes; -19 ambiguous RAD-Tags; +588 recovered; -17 low quality reads; 48554 retained reads.
+Closing files, flushing buffers...
+Outputing details to log: './process_radtags.raw_data.log'
+
+50000 total sequences
+ 1410 barcode not found drops (2.8%)
+   17 low quality read drops (0.0%)
+   19 RAD cutsite not found drops (0.0%)
+48554 retained reads (97.1%)
+
+$ls
+#output
+Fb021_1.1.fq.gz  Fb021_1.rem.1.fq.gz  Fb045_1.1.fq.gz  Fb045_1.rem.1.fq.gz  process_radtags.raw_data.log 
+Fb021_1.2.fq.gz  Fb021_1.rem.2.fq.gz  Fb045_1.2.fq.gz  Fb045_1.rem.2.fq.gz
+
+$mv process_radtags.raw_data.log process_radtags.A1_A2.log #to rename log file, so all log files wont copy-paste over each other!
+
+#for each sample pair you have .1, .2, .rem.1. and .rem.2. files + .log! 
+
+```
+
+## Sublibraries processing radtags
+Do this for each sublibrary! #use up and down arrows and CTRL+right-left to edit commands according to your files!
+```{r}
+#cheat-sheat
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/A3_A4_A9_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/A3_A4_A9_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exerci
+ses/STACKS/raw_data/A3_A4_A9_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.A3_A4_A9.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/A5_A8_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/A5_A8_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/A5_A8_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.A5_A8.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/B1_B2_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/B1_B2_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/B1_B2_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.B1_B2.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/B3_B4_B9_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/B3_B4_B9_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exerci
+ses/STACKS/raw_data/B3_B4_B9_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.B3_B4_B9.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/B5_B8_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/B5_B8_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/B5_B8_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.B5_B8.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/C1_C2_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/C1_C2_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/C1_C2_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.C1_C2.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/C3_C4_C9_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/C3_C4_C9_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exerci
+ses/STACKS/raw_data/C3_C4_C9_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.C3_C4_C9.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/C5_C8_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/C5_C8_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/C5_C8_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.C5_C8.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/D1_D2_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/D1_D2_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/D1_D2_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.D1_D2.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/D3_D4_D9_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/D3_D4_D9_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exerci
+ses/STACKS/raw_data/D3_D4_D9_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.D3_D4_D9.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/D5_D8_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/D5_D8_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/D5_D8_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.D5_D8.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/E1_E2_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/E1_E2_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/E1_E2_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.E1_E2.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/E3_E4_E9_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/E3_E4_E9_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exerci
+ses/STACKS/raw_data/E3_E4_E9_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.E3_E4_E9.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/E5_E8_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/E5_E8_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/E5_E8_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.E5_E8.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/F1_F2_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/F1_F2_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/F1_F2_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.F1_F2.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/F3_F4_F9_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/F3_F4_F9_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exerci
+ses/STACKS/raw_data/F3_F4_F9_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.F3_F4_F9.log
+
+$process_radtags -i gzfastq -1 ~/Share/exercises/STACKS/raw_data/F5_F8_R1_toydata.fastq.gz -2 ~/Share/exercises/STACKS/raw_data/F5_F8_R2_toydata.fastq.gz -o ./ -e pstI -b ~/Share/exercises/ST
+ACKS/raw_data/F5_F8_barcodes_inline_null.txt -c -q -r
+
+$mv process_radtags.raw_data.log process_radtags.F5_F8.log
+
+$ls > list_ind_samples.txt #check it out! There should be 18 sublibrary process_radtags.logs and 54 individual 
+#there should be 235L in your file when you look at it with VIM. 235-18 (sublibraries process_radtags.logs)-1 (this list)=216/4=54!
+
+```
+Could we do this in simplified way? With a *loop* maybe? YES!!!
+```{r}
+#HINT: {prefix}_R1_toydata.fastq.gz and {prefix}_R2_toydata.fastq.gz and accompanying barcode file {prefix}_barcodes_inline_null.txt
+#make new script with vim
+#chmod the script prior execution
+
+src=~/Share/exercises/STACKS/raw_data/  #define source directory!
+files="A1_A2    #define files (prefixes in names!)
+A3_A4_A9
+A5_A8
+B1_B2
+B3_B4_B9
+B5_B8
+C1_C2
+C3_C4_C9
+C5_C8
+D1_D2
+D3_D4_D9
+D5_D8
+E1_E2
+E3_E4_E9
+E5_E8
+F1_F2
+F3_F4_F9
+F5_F8"
+id=1 #define that this is sequential process, starting from 1st file
+
+#for-loop!
+for sample in $files; #instead of 'sample' you can write whatever, like 'i' or 'var' 
+do
+process_radtags -i gzfastq -1 $src${sample}_R1_toydata.fastq.gz -2 $src${sample}_R2_toydata.fastq.gz -o ~/data_qual/clean/ -e pstI -b $src${sample}_barcodes_inline_null.txt -c -q -r   #in defining command, instead of prefixes you need to CALL variables you defined, and those are $src and ${sample}
+
+let "id+=1" #let the sequential process go one by one in samples!
+
+done
+
+```
+Do not unnecessarily copy huge files around: USE PATHS!
+*-c*: remove reads with and uncalled base
+*-q*: discard reads with low quality scores (evaluated using sliding window)
+*-s*: quality score limit within sliding windows
+*-t*: truncate final read length to this value
+*-r*: rescue barcodes and RAD-tags
+
+How many output files do you obtain per sample? What are they?
+```{r}
+## We obtain 4 files per sample: *.1.fq.gz ; *.2.fq.gz ; *.rem.1.fq.gz and *.rem.2.fq.gz. The first two correspond to the read pairs for which both R1 and R2 passed the filtering process. Rem files correspond to those reads whose “partner read” has not passed the filtering process.
+```
+Look at the process_radtag log file. How many reads have been retained and how many have been discarded?
+```{r}
+## There is a lot of useful information in the log files. This information is clearly indicated within the process_radtags.log file.
+```
+For sample Fb166_3: how many reads have been retained? How many read1 and read2 sequences have been retained?
+```{r}
+## The process_radtags.log file does indicate the TOTAL number of retained reads (R1 + R2 + remR1 + remR2) for this individual. If you would like to know how many R1 sequences have been retained you can check the output files for that sample.
+$cd ~/data_qual/clean
+$zcat Fb166_3.1.fq.gz | wc -l
+## you have 4 reads per sequence, so you must divide this by four. Or just do:
+$echo $(zcat bob107.1.fq.gz |wc -l) / 4 | bc
+#there should be 11049 retained reads
+```
+## Removing clone reads
+The *Festuca* dataset is paired-end, and therefore reads originated from the same PCR copies can be detected for each sample and eliminated using the clone_filter module. Create a folder within your home “~/data_qual” directory called “clean_nc” to store the output files. Run clone_filter module to filter PCR-clones only for demultiplexed files of sample “Fb166_3”. Check the different options available for this module on the Stacks web. You should indicate the path for read1, read2 and output folder. Also indicate input file format.
+```{r}
+$mkdir ~/data_qual/clean_nc
+$clone_filter -1 ~/data_qual/clean/Fb166_3.1.fq.gz -2 ~/data_qual/clean/Fb166_3.2.fq.gz -i gzfastq -o ~/data_qual/clean_nc/
+  #output
+Processing paired-end data.
+No oligo sequence specified, will use single and paired-end reads to determine clones.
+Found 1 paired input file(s).
+Processing file 1 of 1 [Fb166_3.1.fq.gz]
+Reading data from:
+  /home/maja2004lts/data_qual/clean/Fb166_3.1.fq.gz and
+  /home/maja2004lts/data_qual/clean/Fb166_3.2.fq.gz
+Processing short read 10000
+Writing filtered data...
+done.
+Freeing hash key memory...done.
+Calculating the distribution of cloned read pairs...
+Num Clones      Count
+1       9445
+2       712
+3       60
+11049 pairs of reads input. 10217 pairs of reads output, discarded 832 pairs of reads, 7.53% clone reads.
+```
+We have run the module only for one individual sample. Writing a command for each sample would be too tedious, you can run a loop that would iterate the same command for each sample. Try to write it yourself if you feel confident with your scripting abilities or you can also use the example script we have prepared for you (you can also find it in /Share/exercises/STACKS/clone_filter.sh)
+[It should take about less than 1' to run]
+```{r}
+###############################
+$cd ~/data_qual/clean #define CWD
+$for i in *.1.fq.gz; do #for every item (i) in files that are (something).1.fq.gz; do
+  case $i in *rem*) continue ;;*) #in case that item (i) has *rem* in name, dont do anything;
+    clone_filter -1 $i -2 ${i%.1.fq.gz}.2.fq.gz -i gzfastq -o ../clean_nc/ > ../clean_nc/${i%.1.fq.gz}.log #then do clone_filter command with defined prefixes of files .1.fq.gz and .2.fq.gz that is THE SAME as .1.fq.gz but only has .2 different! Define output file name as same as sample!
+  esac #exit the case-loop
+done #exit the 'do' task
+###############################
+
+$cp ~/Share/exercises/STACKS/clone_filter.sh ./
+$chmod u+x clone_filter.sh
+$./clone_filter.sh
+
+####output:
+Processing paired-end data.
+No oligo sequence specified, will use single and paired-end reads to determine clones.
+Found 1 paired input file(s).
+Processing file 1 of 1 [Fb021_1.1.fq.gz]
+Reading data from:
+  Fb021_1.1.fq.gz and
+  Fb021_1.2.fq.gz
+
+Writing filtered data...
+done.
+Freeing hash key memory...done.
+Calculating the distribution of cloned read pairs...
+1567 pairs of reads input. 1464 pairs of reads output, discarded 103 pairs of reads, 6.57% clone reads.
+Processing paired-end data.
+No oligo sequence specified, will use single and paired-end reads to determine clones.
+Found 1 paired input file(s).
+Processing file 1 of 1 [Fb021_2.1.fq.gz]
+Reading data from:
+  Fb021_2.1.fq.gz and
+  Fb021_2.2.fq.gz
+Processing short read 10000
+Writing filtered data...
+done.
+Freeing hash key memory...done.
+Calculating the distribution of cloned read pairs...
+14138 pairs of reads input. 13151 pairs of reads output, discarded 987 pairs of reads, 6.98% clone reads.
+
+....
+....
+....
+```
+Go check clean_nc/ directory and check file names!
+```{r}
+#files are named like this *.1.1.fq.gz and *2.2.fq.gz 
+#we want to have just *.1.fq.gz and *.2.fq.gz files (like in clean/ directory!)
+#write simple loop to rename all files:
+
+$cd ~/data_qual/clean_nc/
+src=~data_qual/clean_nc/
+$for i in *.2.fq.gz; do mv -- "$i" "${i%.2.fq.gz}.fq.gz"; done
+$for i in *.1.fq.gz; do mv -- "$i" "${i%.1.fq.gz}.fq.gz"; done
+
+#check your files!
+```
+## De novo assembly and informative marker selection
+After processing from raw reads, we obtained individual fastq files (clean), and then we do assembly of orthologous loci associated to restriction enzyme cut sites without using a reference genome allow to obtain informative genomic variability among individuals of non model species.Stacks is widely used and regularly updated software with wide group of users (googlegroup).
+Pipeline of 'core' modules:
+
+In denovo assembly we start with:
+*1. USTACKS* 
+- will align matching reads into stacks corresponding to individuals. *-m* needs to be defined as minimum read coverage for a 'stack'. Then we define maximum number of mismatch positions within individual loci *-M*. Those reads that are discarded we can inconporate them into 'secondary reads'. Variants within these secondary reads wont be used for SNP calling, but will add into coverage for the SNP calling of variants provided by primary reads (*-N*). As an output, ustacks will give three different files: 
+```{r}
+Sample1.tags.tsv.gz #All loci sequences and their coresponding assembled reads
+Sample1.snps.tsv.gz #Genotype of each position of each locus. At variable positions both genotypes are indicated
+Sample1.alleles.tsv.gz #Haplotypes at the variable positions for each locus
+```
+Do *ustacks* on your clean_nc reads!
+```{r}
+#make new directories: de_novo and ustacks_m3
+$mkdir -p de_novo/ustacks_m3/
+$cd de_novo/ustacks_m3/
+  
+#try to do ustacks for Fb166_4 sample:
+$ustacks -f ~/data_qual/clean_nc/Fb166_4.1.fq.gz -i 1 -t gzfastq --name Fb166_4 -m 3 -M 2 -o ~/de_novo/ustacks_m3/ -N 4 --disable-gapped -p 2
+
+The tags file contains information about all the reads that support each assembled individual locus. For each assembled locus we have one line with the consensus sequence, another line with the model sequence and several lines with the primary and secondary reads. We can count the lines that contain the word “consensus” to know the number of total assembled loci:
+
+#for default -m = 3   
+$zcat ~/de_novo/ustacks_m3/Fb166_4.tags.tsv.gz | grep consensus | wc -l
+52
+
+#try to make -m more strict! Lets say m=6
+$ustacks -f ~/data_qual/clean_nc/Fb166_4.1.fq.gz -i 1 -t gzfastq --name Fb166_4 -m 6 -M 2 -o ~/de_novo/ustacks_m6/ -N 4 --disable-gapped -p 2c
+$zcat ~/de_novo/ustacks_m6/Fb166_4.tags.tsv.gz | grep consensus | wc -l
+5
+#Of course, this is toydata. In real data, you have many many more reads and therefore many more loci! So, when we are requiring a higher read coverage, this is leading into the assembly of less individual loci. That strict approach can be useful if we want less SNPs, but that are more informative and generally shows fine population structure!
+
+#To write for all samples separately would be too tedious, so write a loop:
+
+src=~/data_qual/clean_nc/
+files="Fb021_1
+Fb021_2
+Fb021_4
+Fb026_1
+Fb026_4
+Fb026_5
+Fb036_1
+Fb036_2
+Fb036_3
+Fb041_1
+Fb041_2
+Fb041_3
+Fb045_1
+Fb045_1_rep
+Fb045_3
+Fb045_4
+Fb047_2
+Fb047_3
+Fb047_4
+Fb051_1
+Fb051_2
+Fb051_3
+Fb059_1
+Fb059_2
+Fb059_3
+Fb084_1
+Fb084_2
+Fb084_3
+Fb086_1
+Fb086_2
+Fb086_4
+Fb094_1
+Fb094_2
+Fb094_3
+Fb110_1
+Fb110_1_rep
+Fb110_2
+Fb110_3
+Fb110_4
+Fb116_1
+Fb116_2
+Fb116_3
+Fb135_3
+Fb135_4
+Fb135_5
+Fb141_1
+Fb141_4
+Fb141_5
+Fb162_1
+Fb162_2
+Fb162_3
+Fb166_2
+Fb166_3
+Fb166_4"
+
+id=1
+for sample in $files; do
+        ustacks -f $src/${sample}.1.fq.gz -i $id -t gzfastq --name $sample -m 3 -M 2 -N 4 -o ~/de_novo/ustacks_m3 --disable-gapped -p 2
+
+        let "id+=1"
+done
+
+#now check out directory ustacks_m3/ for new formed files!
+
+```
+*2. CSTACKS*
+- is going to generate catalogues (sets) of consensus loci. The way that is going to merge all individual loci by parameter *-n* that allows maximum mismatches within catalog loci.
+Output files:
+```{r}
+Catalog.tags.tsv.gz #All consensus loci sequences and their coresponding individual loci 
+Catalog.snps.tsv.gz #Genotypes of each variable/ heterozygous position of each catalog locus
+Catalog.alleles.tsv.gz #All haplotypes at variable positions for each catalog locus
+```
+Lets do our catalogs on ustacks files!
+```{r}
+#Build the catalog of loci available in the metapopulation from the samples contained
+#in the population map. To build the catalog from a subset of individuals, supply
+#a separate population map only containing those samples.
+
+$cstacks -P ~/de_novo/ustacks_m3/ -n 5 -M ~/data_qual/popmap_festuca_library1.txt -p 8
+#output: Writing catalog in directory '/home/maja2004lts/de_novo/ustacks_m3/'.
+Final catalog contains 838 loci.
+cstacks is done.
+
+```
+*3. SSTACKS*
+- searches the individual loci constructed by ustacks against the catalog produces by cstacks
+It is going to record who has which catalog loci. Now we have a consensus catalog that allows locus1 between different samples to be grouped together.
+```{r}
+#Run sstacks. Match all samples supplied in the population map against the catalog.
+
+$sstacks -P  ~/de_novo/ustacks_m3/ -M ~/data_qual/popmap_festuca_library1.txt -p 8
+#check out output in directory ustacks_m3
+#you should be able to see sample.matches.tsv.gz in addition to sample.alleles.tsv.gz; sample.snps.tsv.gz and sample.tags.tsv.gz
+```
+*4. tsv2bam*
+- transposes individual output data from sstacks to be locus oriented so that it is easier to analyze each locus across all individuals. This step is where de_novo and re_map meets, so gstacks (next step) is the same for de_novo and ref_map.
+```{r}
+#Run tsv2bam to transpose the data so it is stored by locus, instead of by sample. We will include
+# paired-end reads using tsv2bam. tsv2bam expects the paired read files to be in the samples
+# directory and they should be named consistently with the single-end reads,
+# e.g. sample_01.1.fq.gz and sample_01.2.fq.gz, which is how process_radtags will output them.
+
+$tsv2bam -P ~/de_novo/ustacks_m3/ -M ~/data_qual/popmap_festuca_library1.txt -t 8
+#check out the tsv2bam.log 
+```
+*5. GSTACKS*
+- process each catalog locus and produces a new catalog containing consensus sequences for the catalog loci and the SNP/haplotype calls for each locus and all individuals. It also outputs relevant data statistics.
+```{r}
+Run gstacks: build a paired-end contig from the metapopulation data (if paired-reads provided),
+# align reads per sample, call variant sites in the population, genotypes in each individual.
+
+$gstacks -P ~/de_novo/ustacks_m3/ -M ~/data_qual/popmap_festuca_library1.txt -t 8
+
+Logging to './gstacks.log'.
+Locus/sample distributions will be written to './gstacks.log.distribs'.
+
+Configuration for this run:
+  Input mode: denovo
+  Population map: '/home/maja2004lts/data_qual/popmap_festuca_library1.txt'
+  Input files: 54, e.g. './Fb021_1.matches.bam'
+  Output to: './'
+  Model: marukilow (var_alpha: 0.01, gt_alpha: 0.05)
+
+Reading BAM headers...
+Processing all loci...
+1%...
+2%...
+5%...
+10%...
+20%...
+50%...
+100%
+Input appears to be single-end (no paired-end reads were seen).
+
+Genotyped 835 loci:
+  effective per-sample coverage: mean=8.7x, stdev=2.7x, min=3.8x, max=16.4x
+  mean number of sites per locus: 144.1
+  a consistent phasing was found for 120 of out 261 (46.0%) diploid loci needing phasing
+
+gstacks is done.
+
+```
+*6. POPULATIONS*
+- after snp calling we have all the variant positions and now we need to include wide range of loci filtering and analyse genetic variability considering population information contained in our 'popmap'
+- popmap is tab separated txt file that contains samples and locations (population that sample belongs to). We can have also a 'whitelist' - tab separated txt file saying which tags to take into the analysis. We can feed populations with certain markers we want to include in the analysis. Then we manipulate outputs with several softwares: PLINK, VCF, STRUCTURE, GENEPOP
+```{r}
+# Run populations. Calculate Hardy-Weinberg deviation, population statistics, f-statistics
+# export several output files.
+
+$populations -P ~/de_novo/ustacks_m3/ -M ~/data_qual/popmap_festuca_library1.txt -r 0.65 --vcf --genepop --structure --fstats --hwe --phylip -t 8
+$mkdir populations/
+$mv *populations* populations/
+$cd populations/
+```
+Now lets do the *WHOLE* de_novo pipeline at once, using STACKS *denovo_map.pl*
+```{r}
+denovo_map.pl -T 2 --samples ~/data_qual/clean_nc/ --popmap ~/data_qual/popmap_festuca_library1.txt -o ~/de_novo/denovo_M2/ --min-samples-per-pop 0.65 -X "populations: --vcf --structure --phylip-var-all --fasta-samples-raw" -X "ustacks: -M 2 -N 2 --disable-gapped"
+```
+#### Hooray! You did your first denovo assembly from scratch! 
+Notice that with scripting loops and scripts we save enormus amount of our time!
+
+#### Bonus! For those that want to analyse a 'little bigger' dataset than our toydata:
+```{r}
+#Secure copy trial_seq.tar to your CWD ###this is original dataset 
+
+#extract the .tar.gz file
+
+#those are original files from trial_seq! 
+
+#Copy the process_radtags_loop.sh to your CWD and process original raw files; save those clean reads to original_clean/ -> HINT: you need to adjust your process_radtags_loop.sh according to your file names and chmod it! ...And you need to make original_clean/ directory to put processed files.
+
+#Copy clone_filter.sh script to your CWD and adjust it to clone_filter clean reads from original_clean/
+
+#Remember to rename files in original_clean_nc
+
+#make denovo assembly using denovo_map.pl! Use whatever parameters you want. HINT: we will compare structure/fastStructure and IQtree results from populations output from toydata and original data.
+
+```
+Congrats! You have learned to process some RAD-seq data!
